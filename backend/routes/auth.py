@@ -11,6 +11,13 @@ from models import db, User
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
+def clean_string(value, lowercase=False):
+    """Safely normalize incoming values that may be None/non-string."""
+    if value is None:
+        return ''
+    text = str(value).strip()
+    return text.lower() if lowercase else text
+
 def validate_email(email):
     """Validate email format"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -20,14 +27,14 @@ def validate_email(email):
 def register():
     """User registration endpoint"""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         
         # Validate required fields
-        username = data.get('username', '').strip()
-        email = data.get('email', '').strip().lower()
-        password = data.get('password', '')
-        role = data.get('role', 'FACULTY').upper()
-        tenant_id = data.get('tenant_id', '').strip() or None
+        username = clean_string(data.get('username'))
+        email = clean_string(data.get('email'), lowercase=True)
+        password = data.get('password') or ''
+        role = clean_string(data.get('role', 'FACULTY')).upper() or 'FACULTY'
+        tenant_id = clean_string(data.get('tenant_id')) or None
         
         # Validation
         if not username:
@@ -78,9 +85,9 @@ def register():
 def login():
     """User login endpoint"""
     try:
-        data = request.get_json()
-        email = data.get('email', '').strip().lower()
-        password = data.get('password', '')
+        data = request.get_json() or {}
+        email = clean_string(data.get('email'), lowercase=True)
+        password = data.get('password') or ''
         
         if not email or not password:
             return jsonify({'success': False, 'message': 'Email and password are required'}), 400
